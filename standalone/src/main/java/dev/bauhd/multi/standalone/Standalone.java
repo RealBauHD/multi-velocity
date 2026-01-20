@@ -19,8 +19,12 @@ import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public final class Standalone {
+
+  private static final Logger LOGGER = LogManager.getLogger("Standalone");
 
   private final Map<String, Proxy> proxiesByName = new ConcurrentHashMap<>();
   private final Map<Channel, Proxy> proxiesByChannel = new ConcurrentHashMap<>();
@@ -48,23 +52,23 @@ public final class Standalone {
         .addListener((ChannelFutureListener) future -> {
           this.channel = future.channel();
           if (future.isSuccess()) {
-            System.out.println("Listening on " + this.channel.localAddress());
+            LOGGER.info("Listening on {}", this.channel.localAddress());
           } else {
-            System.err.println("Can not bind to " + this.channel.localAddress() + future.cause());
+            LOGGER.error("Can not bind to {}", this.channel.localAddress(), future.cause());
           }
         });
 
     packetHandler.registerListener(HelloPacket.class, (packet, channel) -> {
       if (this.proxiesByName.containsKey(packet.name())) {
-        System.out.println(channel.remoteAddress() + " tried to connect as " + packet.name()
-            + ", but a proxy with this name is already connected.");
+        LOGGER.warn("{} tried to connect as {}, but a proxy with this name is already connected.",
+            channel.remoteAddress(), packet.name());
         channel.close();
         return;
       }
       final var proxy = new Proxy(packet.name());
       this.proxiesByName.put(packet.name(), proxy);
       this.proxiesByChannel.put(channel, proxy);
-      System.out.println(packet.name() + " connected. (" + channel.remoteAddress() + ")");
+      LOGGER.info("{} connected. ({})", packet.name(), channel.remoteAddress());
     });
 
     packetHandler.registerListener(StatusPacket.class, (packet, channel) -> {
@@ -90,6 +94,8 @@ public final class Standalone {
   public void shutdown() {
     this.bossGroup.shutdownGracefully();
     this.workerGroup.shutdownGracefully();
+
+    LogManager.shutdown(false);
   }
 
   public static void main(String[] args) {

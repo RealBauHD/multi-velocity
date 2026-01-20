@@ -1,5 +1,6 @@
 [versions]
 netty = "4.2.9.Final"
+log4j = "2.25.3"
 
 [plugins]
 shadow = { id = "com.gradleup.shadow", version = "9.3.1" }
@@ -8,5 +9,7 @@ shadow = { id = "com.gradleup.shadow", version = "9.3.1" }
 netty-codec = { group = "io.netty", name = "netty-codec", version.ref = "netty" }
 netty-transport = { group = "io.netty", name = "netty-transport", version.ref = "netty" }
 netty-transport-epoll = { group = "io.netty", name = "netty-transport-native-epoll", version.ref = "netty" }
+
+log4j-core = { group = "org.apache.logging.log4j", name = "log4j-core", version.ref = "log4j" }
 
 velocity = "com.velocitypowered:velocity-api:3.4.0-SNAPSHOT"
