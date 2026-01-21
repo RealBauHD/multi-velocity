@@ -11,7 +11,7 @@ import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
-import dev.bauhd.multi.plugin.listener.PingListener;
+import dev.bauhd.multi.plugin.listener.Listener;
 import dev.bauhd.multi.protocol.object.ProxyStatus;
 import dev.bauhd.multi.protocol.packet.RequestProxyNamesPacket;
 import dev.bauhd.multi.protocol.packet.RequestProxyPacket;
@@ -50,7 +50,7 @@ public final class MultiVelocityPlugin {
     this.networkClient = new NetworkClient(this);
     this.networkClient.start(this.config.host(), this.config.port());
 
-    this.proxyServer.getEventManager().register(this, new PingListener(this));
+    this.proxyServer.getEventManager().register(this, new Listener(this));
 
     this.proxyServer.getScheduler().buildTask(this, () -> {
           if (this.networkClient.connected()) {
