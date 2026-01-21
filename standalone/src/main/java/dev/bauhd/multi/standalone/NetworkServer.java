@@ -59,16 +59,20 @@ public final class NetworkServer extends NetworkChannel {
         .childOption(ChannelOption.TCP_NODELAY, true)
         .childOption(ChannelOption.IP_TOS, 24)
         .bind(host, port)
-        .addListener(ChannelFutureListener.CLOSE_ON_FAILURE)
-        .addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE)
         .addListener((ChannelFutureListener) future -> {
           this.channel = future.channel();
           if (future.isSuccess()) {
             LOGGER.info("Listening on {}", this.channel.localAddress());
           } else {
             LOGGER.error("Can not bind to {}", this.channel.localAddress(), future.cause());
+            this.channel.close();
           }
         });
+  }
+
+  @Override
+  public void handleConnect(Channel channel) {
+    LOGGER.info("Client connected: {}", channel.remoteAddress());
   }
 
   @Override
@@ -76,6 +80,9 @@ public final class NetworkServer extends NetworkChannel {
     final var proxy = this.proxiesByChannel.remove(channel);
     if (proxy != null) {
       this.proxiesByName.remove(proxy.name());
+      LOGGER.info("Connection {} disconnected. ({})", channel.remoteAddress(), proxy.name());
+    } else {
+      LOGGER.info("Connection {} disconnected.", channel.remoteAddress());
     }
   }
 

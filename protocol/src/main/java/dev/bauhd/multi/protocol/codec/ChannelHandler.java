@@ -19,12 +19,11 @@ final class ChannelHandler extends SimpleChannelInboundHandler<Packet> {
 
   @Override
   public void channelActive(ChannelHandlerContext context) {
-    System.out.println("Client connected: " + context.channel().remoteAddress());
+    this.networkChannel.handleConnect(context.channel());
   }
 
   @Override
   public void channelInactive(ChannelHandlerContext context) {
-    System.out.println("Client disconnected: " + context.channel().remoteAddress());
     this.networkChannel.handleDisconnect(context.channel());
   }
 

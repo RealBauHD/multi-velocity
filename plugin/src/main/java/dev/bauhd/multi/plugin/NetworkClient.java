@@ -29,6 +29,7 @@ public final class NetworkClient extends NetworkChannel {
   private final Map<UUID, CompletableFuture<ResponsePacket>> responseFutures;
   private Channel channel;
   private boolean connected;
+  private boolean reconnecting;
 
   public NetworkClient(final MultiVelocityPlugin plugin) {
     this.plugin = plugin;
@@ -52,20 +53,31 @@ public final class NetworkClient extends NetworkChannel {
                 new HelloPacket(Util.VERSION, this.plugin.config().name(), System.currentTimeMillis()));
             this.connected = true;
           } else {
-            this.plugin.logger().error("Connection failed: ", future.cause());
+            if (!this.reconnecting) {
+              this.plugin.logger().error("Connection failed: ", future.cause());
+            }
+            future.channel().close();
           }
         });
   }
 
   @Override
+  public void handleConnect(Channel channel) {
+  }
+
+  @Override
   public void handleDisconnect(Channel channel) {
+    this.plugin.logger().warn("Connection to backend system lost ({})", channel.remoteAddress());
+    this.channel = null;
     this.connected = false;
+    this.reconnecting = true;
     this.attemptReconnect();
   }
 
   private void attemptReconnect() {
     this.eventGroup.schedule(() -> {
       if (this.connected) {
+        this.reconnecting = false;
         return;
       }
 

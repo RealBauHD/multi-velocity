@@ -43,6 +43,8 @@ public abstract class NetworkChannel {
 
   public abstract void start(final String host, final int port);
 
+  public abstract void handleConnect(final Channel channel);
+
   public abstract void handleDisconnect(final Channel channel);
 
   public abstract void shutdown();
