@@ -53,10 +53,12 @@ public final class MultiVelocityPlugin {
     this.proxyServer.getEventManager().register(this, new PingListener(this));
 
     this.proxyServer.getScheduler().buildTask(this, () -> {
-          final var runtime = Runtime.getRuntime();
-          final var status = new ProxyStatus(this.proxyServer.getPlayerCount(),
-              runtime.maxMemory(), runtime.freeMemory(), runtime.totalMemory());
-          this.networkClient.send(new StatusPacket(status));
+          if (this.networkClient.connected()) {
+            final var runtime = Runtime.getRuntime();
+            final var status = new ProxyStatus(this.proxyServer.getPlayerCount(),
+                runtime.maxMemory(), runtime.freeMemory(), runtime.totalMemory());
+            this.networkClient.send(new StatusPacket(status));
+          }
         })
         .repeat(5, TimeUnit.SECONDS)
         .delay(5, TimeUnit.SECONDS)
@@ -139,8 +141,8 @@ public final class MultiVelocityPlugin {
     return this.logger;
   }
 
-  public String name() {
-    return this.config.name();
+  public Config config() {
+    return this.config;
   }
 
   public NetworkClient networkClient() {

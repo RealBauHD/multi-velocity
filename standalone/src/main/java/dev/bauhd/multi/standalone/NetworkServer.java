@@ -45,6 +45,7 @@ public final class NetworkServer extends NetworkChannel {
       this.proxiesByName.put(packet.name(), proxy);
       this.proxiesByChannel.put(channel, proxy);
       LOGGER.info("{} connected. ({})", packet.name(), channel.remoteAddress());
+      // TODO: send player count
     });
   }
 

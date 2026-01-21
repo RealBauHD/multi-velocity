@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 public final class NetworkClient extends NetworkChannel {
 
@@ -48,7 +49,7 @@ public final class NetworkClient extends NetworkChannel {
             this.channel = future.channel();
             this.plugin.logger().info("Connected to server: {}", this.channel.remoteAddress());
             this.channel.writeAndFlush(
-                new HelloPacket(Util.VERSION, this.plugin.name(), System.currentTimeMillis()));
+                new HelloPacket(Util.VERSION, this.plugin.config().name(), System.currentTimeMillis()));
             this.connected = true;
           } else {
             this.plugin.logger().error("Connection failed: ", future.cause());
@@ -58,6 +59,20 @@ public final class NetworkClient extends NetworkChannel {
 
   @Override
   public void handleDisconnect(Channel channel) {
+    this.connected = false;
+    this.attemptReconnect();
+  }
+
+  private void attemptReconnect() {
+    this.eventGroup.schedule(() -> {
+      if (this.connected) {
+        return;
+      }
+
+      this.plugin.logger().info("Trying to reconnect...");
+      this.start(this.plugin.config().host(), this.plugin.config().port());
+      this.attemptReconnect();
+    }, 3, TimeUnit.SECONDS);
   }
 
   public void send(final Packet packet) {
@@ -66,6 +81,10 @@ public final class NetworkClient extends NetworkChannel {
     } else {
       this.channel.eventLoop().execute(() -> this.channel.writeAndFlush(packet));
     }
+  }
+
+  public boolean connected() {
+    return this.connected;
   }
 
   @SuppressWarnings("unchecked")
