@@ -1,12 +1,5 @@
 package dev.bauhd.multi.protocol;
 
-import io.netty.buffer.ByteBuf;
+public interface Packet extends Serializable {
 
-public interface Packet {
-
-  void encode(ByteBuf buf);
-
-  void decode(ByteBuf buf);
-
-  int id();
 }

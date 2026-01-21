@@ -10,7 +10,7 @@ public final class PingListener {
   private int playerCount;
 
   public PingListener(final MultiVelocityPlugin plugin) {
-    plugin.packetHandler().registerListener(PlayerCountPacket.class, (packet, channel) ->
+    plugin.networkClient().registerPacketListener(PlayerCountPacket.class, (packet, channel) ->
         this.playerCount = packet.playerCount());
   }
 

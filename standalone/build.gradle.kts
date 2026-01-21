@@ -6,9 +6,7 @@ plugins {
 dependencies {
     implementation(project(":protocol"))
 
-    implementation(libs.netty.codec)
-    implementation(libs.netty.transport)
-    implementation(libs.netty.transport.epoll)
+    implementation(libs.bundles.netty)
     implementation(variantOf(libs.netty.transport.epoll) { classifier("linux-x86_64") })
     implementation(variantOf(libs.netty.transport.epoll) { classifier("linux-aarch_64") })
     implementation(libs.log4j.core)

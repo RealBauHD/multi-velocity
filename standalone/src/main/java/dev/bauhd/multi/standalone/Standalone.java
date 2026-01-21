@@ -1,99 +1,55 @@
 package dev.bauhd.multi.standalone;
 
-import dev.bauhd.multi.protocol.Packet;
-import dev.bauhd.multi.protocol.PacketHandler;
-import dev.bauhd.multi.protocol.codec.PipelineInitializer;
-import dev.bauhd.multi.protocol.packet.HelloPacket;
 import dev.bauhd.multi.protocol.packet.PlayerCountPacket;
+import dev.bauhd.multi.protocol.packet.ProxyNamesResponsePacket;
+import dev.bauhd.multi.protocol.packet.ProxyResponsePacket;
+import dev.bauhd.multi.protocol.packet.RequestProxyNamesPacket;
+import dev.bauhd.multi.protocol.packet.RequestProxyPacket;
 import dev.bauhd.multi.protocol.packet.StatusPacket;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultiThreadIoEventLoopGroup;
-import io.netty.channel.epoll.Epoll;
-import io.netty.channel.epoll.EpollIoHandler;
-import io.netty.channel.epoll.EpollServerSocketChannel;
-import io.netty.channel.nio.NioIoHandler;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.ArrayList;
 import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public final class Standalone {
 
-  private static final Logger LOGGER = LogManager.getLogger("Standalone");
-
-  private final Map<String, Proxy> proxiesByName = new ConcurrentHashMap<>();
-  private final Map<Channel, Proxy> proxiesByChannel = new ConcurrentHashMap<>();
-  private final EventLoopGroup bossGroup;
-  private final EventLoopGroup workerGroup;
-  private Channel channel;
+  private final NetworkServer networkServer;
   private int cachedPlayerCount;
 
   public Standalone() {
-    final var epoll = Epoll.isAvailable();
-    final var factory = epoll ? EpollIoHandler.newFactory() : NioIoHandler.newFactory();
-    this.bossGroup = new MultiThreadIoEventLoopGroup(1, factory);
-    this.workerGroup = new MultiThreadIoEventLoopGroup(factory);
-    final var packetHandler = new PacketHandler();
+    this.networkServer = new NetworkServer();
+    this.networkServer.start("127.0.0.1", 2000);
 
-    new ServerBootstrap()
-        .channelFactory(epoll ? EpollServerSocketChannel::new : NioServerSocketChannel::new)
-        .group(this.bossGroup, this.workerGroup)
-        .childHandler(new PipelineInitializer(packetHandler))
-        .childOption(ChannelOption.TCP_NODELAY, true)
-        .childOption(ChannelOption.IP_TOS, 24)
-        .bind("127.0.0.1", 2000)
-        .addListener(ChannelFutureListener.CLOSE_ON_FAILURE)
-        .addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE)
-        .addListener((ChannelFutureListener) future -> {
-          this.channel = future.channel();
-          if (future.isSuccess()) {
-            LOGGER.info("Listening on {}", this.channel.localAddress());
-          } else {
-            LOGGER.error("Can not bind to {}", this.channel.localAddress(), future.cause());
-          }
-        });
-
-    packetHandler.registerListener(HelloPacket.class, (packet, channel) -> {
-      if (this.proxiesByName.containsKey(packet.name())) {
-        LOGGER.warn("{} tried to connect as {}, but a proxy with this name is already connected.",
-            channel.remoteAddress(), packet.name());
-        channel.close();
-        return;
-      }
-      final var proxy = new Proxy(packet.name());
-      this.proxiesByName.put(packet.name(), proxy);
-      this.proxiesByChannel.put(channel, proxy);
-      LOGGER.info("{} connected. ({})", packet.name(), channel.remoteAddress());
-    });
-
-    packetHandler.registerListener(StatusPacket.class, (packet, channel) -> {
-      this.proxiesByChannel.get(channel).playerCount(packet.playerCount());
+    this.networkServer.registerPacketListener(StatusPacket.class, (packet, channel) -> {
+      this.networkServer.proxiesByChannel().get(channel).setStatus(packet.status());
 
       var playerCount = 0;
-      for (final var proxy : this.proxiesByName.values()) {
-        playerCount += proxy.playerCount();
+      for (final var proxy : this.networkServer.proxiesByName().values()) {
+        playerCount += proxy.status().playerCount();
       }
       if (this.cachedPlayerCount != playerCount) {
-        this.send(new PlayerCountPacket(playerCount));
+        this.networkServer.send(new PlayerCountPacket(playerCount));
         this.cachedPlayerCount = playerCount;
       }
     });
-  }
 
-  public void send(final Packet packet) {
-    for (final var channel : this.proxiesByChannel.keySet()) {
-      channel.eventLoop().execute(() -> channel.writeAndFlush(packet));
-    }
+    this.networkServer.registerPacketListener(RequestProxyNamesPacket.class, (packet, channel) -> {
+      final var proxies = new ArrayList<String>();
+      for (final var name : this.networkServer.proxiesByName().keySet()) {
+        if (name.toLowerCase().startsWith(packet.remaining())) {
+          proxies.add(name);
+        }
+      }
+      channel.writeAndFlush(new ProxyNamesResponsePacket(packet.id(), proxies));
+    });
+
+    this.networkServer.registerPacketListener(RequestProxyPacket.class, (packet, channel) -> {
+      final var proxy = this.networkServer.proxiesByName().get(packet.proxy());
+      // TODO: do something if the proxy does not exist :)
+      channel.writeAndFlush(new ProxyResponsePacket(packet.id(), proxy));
+    });
   }
 
   public void shutdown() {
-    this.bossGroup.shutdownGracefully();
-    this.workerGroup.shutdownGracefully();
+    this.networkServer.shutdown();
 
     LogManager.shutdown(false);
   }

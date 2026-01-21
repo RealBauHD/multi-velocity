@@ -2,6 +2,7 @@ package dev.bauhd.multi.protocol;
 
 import io.netty.buffer.ByteBuf;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 public final class Util {
 
@@ -42,6 +43,15 @@ public final class Util {
       }
     }
     throw new RuntimeException("VarInt too big");
+  }
+
+  public static void writeUniqueId(final ByteBuf buf, final UUID value) {
+    buf.writeLong(value.getMostSignificantBits());
+    buf.writeLong(value.getLeastSignificantBits());
+  }
+
+  public static UUID readUniqueId(final ByteBuf buf) {
+    return new UUID(buf.readLong(), buf.readLong());
   }
 
   public static void writeString(final ByteBuf buf, final String value) {

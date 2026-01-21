@@ -1,15 +1,15 @@
 package dev.bauhd.multi.protocol.packet;
 
 import dev.bauhd.multi.protocol.Packet;
-import dev.bauhd.multi.protocol.Util;
+import dev.bauhd.multi.protocol.object.ProxyStatus;
 import io.netty.buffer.ByteBuf;
 
 public final class StatusPacket implements Packet {
 
-  private int playerCount;
+  private ProxyStatus status;
 
-  public StatusPacket(final int playerCount) {
-    this.playerCount = playerCount;
+  public StatusPacket(final ProxyStatus status) {
+    this.status = status;
   }
 
   public StatusPacket() {
@@ -17,27 +17,23 @@ public final class StatusPacket implements Packet {
 
   @Override
   public void encode(ByteBuf buf) {
-    Util.writeVarInt(buf, this.playerCount);
+    this.status.encode(buf);
   }
 
   @Override
   public void decode(ByteBuf buf) {
-    this.playerCount = Util.readVarInt(buf);
+    this.status = new ProxyStatus();
+    this.status.decode(buf);
   }
 
-  @Override
-  public int id() {
-    return 1;
-  }
-
-  public int playerCount() {
-    return this.playerCount;
+  public ProxyStatus status() {
+    return this.status;
   }
 
   @Override
   public String toString() {
     return "StatusPacket{" +
-        "playerCount=" + this.playerCount +
+        "status=" + this.status +
         '}';
   }
 }

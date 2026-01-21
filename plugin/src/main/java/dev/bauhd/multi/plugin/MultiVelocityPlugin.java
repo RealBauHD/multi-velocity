@@ -2,6 +2,9 @@ package dev.bauhd.multi.plugin;
 
 import com.google.gson.Gson;
 import com.google.inject.Inject;
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.velocitypowered.api.command.BrigadierCommand;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
@@ -9,26 +12,17 @@ import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import dev.bauhd.multi.plugin.listener.PingListener;
-import dev.bauhd.multi.protocol.PacketHandler;
-import dev.bauhd.multi.protocol.Util;
-import dev.bauhd.multi.protocol.codec.PipelineInitializer;
-import dev.bauhd.multi.protocol.packet.HelloPacket;
+import dev.bauhd.multi.protocol.object.ProxyStatus;
+import dev.bauhd.multi.protocol.packet.RequestProxyNamesPacket;
+import dev.bauhd.multi.protocol.packet.RequestProxyPacket;
 import dev.bauhd.multi.protocol.packet.StatusPacket;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultiThreadIoEventLoopGroup;
-import io.netty.channel.epoll.Epoll;
-import io.netty.channel.epoll.EpollIoHandler;
-import io.netty.channel.epoll.EpollSocketChannel;
-import io.netty.channel.nio.NioIoHandler;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.slf4j.Logger;
 
 @Plugin(id = "multi-velocity", authors = "BauHD", version = "1.0.0")
@@ -38,10 +32,7 @@ public final class MultiVelocityPlugin {
   private final Logger logger;
   private final Path directory;
   private Config config;
-  private EventLoopGroup eventGroup;
-  private PacketHandler packetHandler;
-  private Channel channel;
-  private boolean connected;
+  private NetworkClient networkClient;
 
   @Inject
   public MultiVelocityPlugin(
@@ -55,16 +46,79 @@ public final class MultiVelocityPlugin {
   @Subscribe
   public void handle(final ProxyInitializeEvent event) {
     this.loadConfig();
-    this.startClient();
+
+    this.networkClient = new NetworkClient(this);
+    this.networkClient.start(this.config.host(), this.config.port());
 
     this.proxyServer.getEventManager().register(this, new PingListener(this));
 
-    this.proxyServer.getScheduler().buildTask(this, () ->
-            this.channel.eventLoop().execute(() ->
-                this.channel.writeAndFlush(new StatusPacket(this.proxyServer.getPlayerCount()))))
+    this.proxyServer.getScheduler().buildTask(this, () -> {
+          final var runtime = Runtime.getRuntime();
+          final var status = new ProxyStatus(this.proxyServer.getPlayerCount(),
+              runtime.maxMemory(), runtime.freeMemory(), runtime.totalMemory());
+          this.networkClient.send(new StatusPacket(status));
+        })
         .repeat(5, TimeUnit.SECONDS)
         .delay(5, TimeUnit.SECONDS)
         .schedule();
+
+    final var color = TextColor.color(0x3AB3FF);
+    this.proxyServer.getCommandManager().register(this.proxyServer.getCommandManager()
+        .metaBuilder("status")
+        .plugin(this)
+        .build(), new BrigadierCommand(BrigadierCommand.literalArgumentBuilder("status")
+        .then(BrigadierCommand.requiredArgumentBuilder("proxy", StringArgumentType.word())
+            .suggests((context, suggestions) ->
+                this.networkClient.request(
+                        new RequestProxyNamesPacket(suggestions.getRemainingLowerCase()))
+                    .thenApply(packet -> {
+                      for (final var proxy : packet.proxies()) {
+                        suggestions.suggest(proxy);
+                      }
+                      return suggestions.build();
+                    }))
+            .executes(context -> {
+              this.networkClient.request(
+                      new RequestProxyPacket(context.getArgument("proxy", String.class)))
+                  .thenAccept(packet -> {
+                    final var proxy = packet.proxy();
+                    context.getSource().sendMessage(
+                        Component.textOfChildren(
+                            Component.text(proxy.name(), color),
+                            Component.newline(),
+                            Component.text("Uptime: ", NamedTextColor.GRAY),
+                            Component.text(this.formatUptime(
+                                System.currentTimeMillis() - proxy.startTime()), color),
+                            Component.newline(),
+                            Component.text("Players: ", NamedTextColor.GRAY),
+                            Component.text(proxy.status().playerCount(), color),
+                            Component.newline(),
+                            Component.text("Memory: ", NamedTextColor.GRAY),
+                            Component.text(this.formatMemory(proxy.status().freeMemory()), color),
+                            Component.text(" free / ", NamedTextColor.GRAY),
+                            Component.text(this.formatMemory(proxy.status().totalMemory()), color),
+                            Component.text(" used / ", NamedTextColor.GRAY),
+                            Component.text(this.formatMemory(proxy.status().maxMemory()), color),
+                            Component.text(" max", NamedTextColor.GRAY)
+                        ));
+                  });
+
+              return Command.SINGLE_SUCCESS;
+            }))));
+  }
+
+  private String formatMemory(final long bytes) {
+    final var mb = bytes / (1024 * 1024);
+    return mb + " MB";
+  }
+
+  private String formatUptime(long millis) {
+    var seconds = millis / 1000;
+    var minutes = seconds / 60;
+    final var hours = minutes / 60;
+    seconds %= 60;
+    minutes %= 60;
+    return hours + "h " + minutes + "m " + seconds + "s";
   }
 
   private void loadConfig() {
@@ -76,39 +130,20 @@ public final class MultiVelocityPlugin {
     }
   }
 
-  private void startClient() {
-    final boolean epoll = Epoll.isAvailable();
-    final var factory = epoll ? EpollIoHandler.newFactory() : NioIoHandler.newFactory();
-    this.eventGroup = new MultiThreadIoEventLoopGroup(1, factory);
-    this.packetHandler = new PacketHandler();
-    new Bootstrap()
-        .group(this.eventGroup)
-        .channel(epoll ? EpollSocketChannel.class : NioSocketChannel.class)
-        .handler(new PipelineInitializer(packetHandler))
-        .option(ChannelOption.TCP_NODELAY, true)
-        .connect(this.config.host(), this.config.port())
-        .addListener((ChannelFutureListener) future -> {
-          if (future.isSuccess()) {
-            this.channel = future.channel();
-            this.logger.info("Connected to server: {}", this.channel.remoteAddress());
-            this.channel.writeAndFlush(new HelloPacket(Util.VERSION, this.config.name()));
-            this.connected = true;
-          } else {
-            this.logger.error("Connection failed: ", future.cause());
-          }
-        });
-  }
-
   @Subscribe
   public void handle(final ProxyShutdownEvent event) {
-    this.eventGroup.shutdownGracefully();
+    this.networkClient.shutdown();
   }
 
-  public PacketHandler packetHandler() {
-    return this.packetHandler;
+  public Logger logger() {
+    return this.logger;
   }
 
-  public boolean connected() {
-    return this.connected;
+  public String name() {
+    return this.config.name();
+  }
+
+  public NetworkClient networkClient() {
+    return this.networkClient;
   }
 }

@@ -8,10 +8,12 @@ public final class HelloPacket implements Packet {
 
   private int version;
   private String name;
+  private long startTime;
 
-  public HelloPacket(final int version, final String name) {
+  public HelloPacket(final int version, final String name, final long startTime) {
     this.version = version;
     this.name = name;
+    this.startTime = startTime;
   }
 
   public HelloPacket() {
@@ -21,17 +23,14 @@ public final class HelloPacket implements Packet {
   public void encode(ByteBuf buf) {
     Util.writeVarInt(buf, this.version);
     Util.writeString(buf, this.name);
+    buf.writeLong(this.startTime);
   }
 
   @Override
   public void decode(ByteBuf buf) {
     this.version = Util.readVarInt(buf);
     this.name = Util.readString(buf);
-  }
-
-  @Override
-  public int id() {
-    return 0;
+    this.startTime = buf.readLong();
   }
 
   public int version() {
@@ -42,11 +41,16 @@ public final class HelloPacket implements Packet {
     return this.name;
   }
 
+  public long startTime() {
+    return this.startTime;
+  }
+
   @Override
   public String toString() {
     return "HelloPacket{" +
         "version=" + this.version +
         ", name='" + this.name + '\'' +
+        ", startTime=" + this.startTime +
         '}';
   }
 }

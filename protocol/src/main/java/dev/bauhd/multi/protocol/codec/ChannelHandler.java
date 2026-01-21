@@ -1,21 +1,20 @@
 package dev.bauhd.multi.protocol.codec;
 
 import dev.bauhd.multi.protocol.Packet;
-import dev.bauhd.multi.protocol.PacketHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
 final class ChannelHandler extends SimpleChannelInboundHandler<Packet> {
 
-  private final PacketHandler packetHandler;
+  private final NetworkChannel networkChannel;
 
-  public ChannelHandler(final PacketHandler packetHandler) {
-    this.packetHandler = packetHandler;
+  public ChannelHandler(final NetworkChannel networkChannel) {
+    this.networkChannel = networkChannel;
   }
 
   @Override
   protected void channelRead0(ChannelHandlerContext context, Packet packet) {
-    this.packetHandler.handle(context.channel(), packet);
+    this.networkChannel.handle(context.channel(), packet);
   }
 
   @Override
@@ -26,6 +25,7 @@ final class ChannelHandler extends SimpleChannelInboundHandler<Packet> {
   @Override
   public void channelInactive(ChannelHandlerContext context) {
     System.out.println("Client disconnected: " + context.channel().remoteAddress());
+    this.networkChannel.handleDisconnect(context.channel());
   }
 
   @Override

@@ -10,9 +10,7 @@ repositories {
 dependencies {
     implementation(project(":protocol"))
 
-    compileOnly(libs.netty.codec)
-    compileOnly(libs.netty.transport)
-    compileOnly(libs.netty.transport.epoll)
+    compileOnly(libs.bundles.netty)
     compileOnly(libs.velocity)
 
     annotationProcessor(libs.velocity)

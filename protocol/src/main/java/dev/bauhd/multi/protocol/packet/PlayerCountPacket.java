@@ -25,11 +25,6 @@ public final class PlayerCountPacket implements Packet {
     this.playerCount = Util.readVarInt(buf);
   }
 
-  @Override
-  public int id() {
-    return 2;
-  }
-
   public int playerCount() {
     return this.playerCount;
   }

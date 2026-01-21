@@ -3,5 +3,5 @@ plugins {
 }
 
 dependencies {
-    compileOnly(libs.netty.codec)
+    compileOnly(libs.bundles.netty)
 }
