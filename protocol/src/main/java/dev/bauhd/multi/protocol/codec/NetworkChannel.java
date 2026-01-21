@@ -7,16 +7,14 @@ import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollIoHandler;
 import io.netty.channel.nio.NioIoHandler;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
 public abstract class NetworkChannel {
 
   private final PacketRegistry packetRegistry = new PacketRegistry();
-  private final Map<Class<?>, List<BiConsumer<Packet, Channel>>> listener = new HashMap<>();
+  private final Map<Class<?>, BiConsumer<Packet, Channel>> listener = new HashMap<>();
 
   public PacketRegistry packetHandler() {
     return this.packetRegistry;
@@ -26,16 +24,13 @@ public abstract class NetworkChannel {
   public <T> void registerPacketListener(
       final Class<T> clazz, final BiConsumer<T, Channel> packet
   ) {
-    this.listener.computeIfAbsent(clazz, aClass -> new ArrayList<>())
-        .add((BiConsumer<Packet, Channel>) packet);
+    this.listener.put(clazz, (BiConsumer<Packet, Channel>) packet);
   }
 
   public void handlePacket(final Channel channel, final Packet packet) {
-    final var listeners = this.listener.get(packet.getClass());
-    if (listeners != null) {
-      for (final var consumer : listeners) {
-        consumer.accept(packet, channel);
-      }
+    final var listener = this.listener.get(packet.getClass());
+    if (listener != null) {
+        listener.accept(packet, channel);
     }
   }
 

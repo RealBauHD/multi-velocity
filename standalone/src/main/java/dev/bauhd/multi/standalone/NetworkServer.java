@@ -4,7 +4,6 @@ import dev.bauhd.multi.protocol.Packet;
 import dev.bauhd.multi.protocol.codec.NetworkChannel;
 import dev.bauhd.multi.protocol.codec.PipelineInitializer;
 import dev.bauhd.multi.protocol.object.Proxy;
-import dev.bauhd.multi.protocol.packet.HelloPacket;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -33,20 +32,6 @@ public final class NetworkServer extends NetworkChannel {
     final var factory = this.factory();
     this.bossGroup = new MultiThreadIoEventLoopGroup(1, factory);
     this.workerGroup = new MultiThreadIoEventLoopGroup(factory);
-
-    this.registerPacketListener(HelloPacket.class, (packet, channel) -> {
-      if (this.proxiesByName.containsKey(packet.name())) {
-        LOGGER.warn("{} tried to connect as {}, but a proxy with this name is already connected.",
-            channel.remoteAddress(), packet.name());
-        channel.close();
-        return;
-      }
-      final var proxy = new Proxy(packet.name(), packet.startTime());
-      this.proxiesByName.put(packet.name(), proxy);
-      this.proxiesByChannel.put(channel, proxy);
-      LOGGER.info("{} connected. ({})", packet.name(), channel.remoteAddress());
-      // TODO: send player count
-    });
   }
 
   @Override
