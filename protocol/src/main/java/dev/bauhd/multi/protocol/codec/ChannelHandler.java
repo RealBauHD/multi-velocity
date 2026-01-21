@@ -1,9 +1,11 @@
 package dev.bauhd.multi.protocol.codec;
 
 import dev.bauhd.multi.protocol.Packet;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
+@Sharable
 final class ChannelHandler extends SimpleChannelInboundHandler<Packet> {
 
   private final NetworkChannel networkChannel;
@@ -14,7 +16,7 @@ final class ChannelHandler extends SimpleChannelInboundHandler<Packet> {
 
   @Override
   protected void channelRead0(ChannelHandlerContext context, Packet packet) {
-    this.networkChannel.handle(context.channel(), packet);
+    this.networkChannel.handlePacket(context.channel(), packet);
   }
 
   @Override

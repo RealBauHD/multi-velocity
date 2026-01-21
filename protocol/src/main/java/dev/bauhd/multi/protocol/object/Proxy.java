@@ -49,4 +49,13 @@ public final class Proxy implements Serializable {
   public void setStatus(final ProxyStatus status) {
     this.status = status;
   }
+
+  @Override
+  public String toString() {
+    return "Proxy{" +
+        "name='" + this.name + '\'' +
+        ", startTime=" + this.startTime +
+        ", status=" + this.status +
+        '}';
+  }
 }

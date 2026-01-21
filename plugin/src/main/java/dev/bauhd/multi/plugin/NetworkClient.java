@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public final class NetworkClient extends NetworkChannel {
 
@@ -106,16 +107,22 @@ public final class NetworkClient extends NetworkChannel {
     this.responseFutures.put(id, (CompletableFuture<ResponsePacket>) future);
     packet.setId(id);
     this.send(packet);
-    return future;
+    return future.orTimeout(30, TimeUnit.SECONDS).exceptionally(throwable -> {
+      this.responseFutures.remove(id);
+      if (throwable instanceof TimeoutException) {
+        this.plugin.logger().warn("Request {} for {} timed out!" , id, packet.getClass());
+      }
+      return null;
+    });
   }
 
   @Override
-  public void handle(Channel channel, Packet packet) {
+  public void handlePacket(Channel channel, Packet packet) {
     this.plugin.logger().info("handle {}", packet);
     if (packet instanceof ResponsePacket response) {
       this.responseFutures.remove(response.id()).complete(response);
     } else {
-      super.handle(channel, packet);
+      super.handlePacket(channel, packet);
     }
   }
 

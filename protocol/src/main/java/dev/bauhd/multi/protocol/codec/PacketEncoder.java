@@ -4,9 +4,11 @@ import dev.bauhd.multi.protocol.Packet;
 import dev.bauhd.multi.protocol.PacketRegistry;
 import dev.bauhd.multi.protocol.Util;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
+@Sharable
 final class PacketEncoder extends MessageToByteEncoder<Packet> {
 
   private final PacketRegistry packetRegistry;

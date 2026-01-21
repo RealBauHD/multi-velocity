@@ -23,12 +23,14 @@ public abstract class NetworkChannel {
   }
 
   @SuppressWarnings("unchecked")
-  public <T> void registerPacketListener(final Class<T> clazz, final BiConsumer<T, Channel> packet) {
-    final var listeners = this.listener.computeIfAbsent(clazz, aClass -> new ArrayList<>());
-    listeners.add((BiConsumer<Packet, Channel>) packet);
+  public <T> void registerPacketListener(
+      final Class<T> clazz, final BiConsumer<T, Channel> packet
+  ) {
+    this.listener.computeIfAbsent(clazz, aClass -> new ArrayList<>())
+        .add((BiConsumer<Packet, Channel>) packet);
   }
 
-  public void handle(final Channel channel, final Packet packet) {
+  public void handlePacket(final Channel channel, final Packet packet) {
     final var listeners = this.listener.get(packet.getClass());
     if (listeners != null) {
       for (final var consumer : listeners) {
