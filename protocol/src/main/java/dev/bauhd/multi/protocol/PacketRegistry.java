@@ -9,14 +9,14 @@ import dev.bauhd.multi.protocol.packet.RequestProxyPacket;
 import dev.bauhd.multi.protocol.packet.StatusPacket;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import java.util.HashMap;
-import java.util.Map;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.util.function.Supplier;
 
 public final class PacketRegistry {
 
   private final IntObjectMap<Supplier<Packet>> packetSupplier = new IntObjectHashMap<>();
-  private final Map<Class<Packet>, Integer> packetIds = new HashMap<>();
+  private final Object2IntMap<Class<Packet>> packetIds = new Object2IntOpenHashMap<>();
 
   public PacketRegistry() {
     this.register(0x00, HelloPacket.class, HelloPacket::new);
@@ -41,6 +41,6 @@ public final class PacketRegistry {
   }
 
   public int packetId(final Class<?> clazz) {
-    return this.packetIds.get(clazz);
+    return this.packetIds.getInt(clazz);
   }
 }

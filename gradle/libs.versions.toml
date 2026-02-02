@@ -15,4 +15,6 @@ netty-transport-epoll = { group = "io.netty", name = "netty-transport-native-epo
 
 log4j-core = { group = "org.apache.logging.log4j", name = "log4j-core", version.ref = "log4j" }
 
+fastutil = "it.unimi.dsi:fastutil-core:8.5.18"
+
 velocity = "com.velocitypowered:velocity-api:3.4.0-SNAPSHOT"
