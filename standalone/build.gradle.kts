@@ -26,6 +26,7 @@ tasks {
 
         exclude(
             "it/unimi/dsi/fastutil/*Big*",
+            "it/unimi/dsi/fastutil/*Pair*",
             "it/unimi/dsi/fastutil/*Queue*",
             "it/unimi/dsi/fastutil/booleans/**",
             "it/unimi/dsi/fastutil/bytes/**",
@@ -41,6 +42,10 @@ tasks {
             "it/unimi/dsi/fastutil/ints/*Float*",
             "it/unimi/dsi/fastutil/ints/*Big*",
             "it/unimi/dsi/fastutil/ints/*Tree*",
+            "it/unimi/dsi/fastutil/ints/*Pair*",
+            "it/unimi/dsi/fastutil/ints/*Immutable*",
+            "it/unimi/dsi/fastutil/ints/*Array*",
+            "it/unimi/dsi/fastutil/ints/*Linked*",
             "it/unimi/dsi/fastutil/longs/**",
             "it/unimi/dsi/fastutil/objects/*Byte*",
             "it/unimi/dsi/fastutil/objects/*Char*",
@@ -48,11 +53,13 @@ tasks {
             "it/unimi/dsi/fastutil/objects/*Long*",
             "it/unimi/dsi/fastutil/objects/*Big*",
             "it/unimi/dsi/fastutil/objects/*Tree*",
+            "it/unimi/dsi/fastutil/objects/*Pair*",
             "it/unimi/dsi/fastutil/objects/*2Object*",
-            "it/unimi/dsi/fastutil/objects/*HashSet*",
-            "javax/annotation/**",
-            "org/checkerframework/**",
-            "javax.annotation/**"
+            "it/unimi/dsi/fastutil/objects/*Float*",
+            "it/unimi/dsi/fastutil/objects/*Boolean*",
+            "it/unimi/dsi/fastutil/objects/*Immutable*",
+            "it/unimi/dsi/fastutil/objects/*Array*",
+            "it/unimi/dsi/fastutil/objects/*Linked*"
         )
     }
 }

@@ -6,10 +6,10 @@ log4j = "2.25.3"
 shadow = { id = "com.gradleup.shadow", version = "9.3.1" }
 
 [bundles]
-netty = ["netty-codec", "netty-transport", "netty-transport-epoll"]
+netty = ["netty-codec-compression", "netty-transport", "netty-transport-epoll"]
 
 [libraries]
-netty-codec = { group = "io.netty", name = "netty-codec", version.ref = "netty" }
+netty-codec-compression = { group = "io.netty", name = "netty-codec-compression", version.ref = "netty" }
 netty-transport = { group = "io.netty", name = "netty-transport", version.ref = "netty" }
 netty-transport-epoll = { group = "io.netty", name = "netty-transport-native-epoll", version.ref = "netty" }
 
