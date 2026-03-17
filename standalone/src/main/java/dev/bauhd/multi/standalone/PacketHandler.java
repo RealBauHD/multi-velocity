@@ -63,7 +63,7 @@ public final class PacketHandler {
         proxies.add(name);
       }
     }
-    channel.writeAndFlush(new ProxyNamesResponsePacket(packet.id(), proxies));
+    channel.writeAndFlush(new ProxyNamesResponsePacket(packet.id(), proxies.toArray(new String[0])));
   }
 
   private void handleProxyRequest(final RequestProxyPacket packet, final Channel channel) {
